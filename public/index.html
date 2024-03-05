@@ -8,47 +8,91 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.1/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.1/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    .canvas-container {
+        display: flex;
+    }
+
+    x3d {
+        border: 1px solid black;
+        margin-right: 10px;
+    }
+  </style>
 </head>
 <body>
-  <!-- WEBCAM INPUT -->
-  <div class="column">
-    <article class="panel is-info">
-      <p class="panel-heading">
-        Webcam Input
-      </p>
-      <div class="panel-block">
-        <video class="input_video3"></video>
-      </div>
-    </article>
-  </div>
+  <div class="canvas-container">
+    <x3d width='750px' height='600px'>
+      <scene>
+        <viewpoint position="0 0 15"></viewpoint>
+        <Transform id="fish" translation="0 0 0" rotation="0 1 0 3.141593">
+          <Transform id="body" translation="0 0 0">
+            <Inline nameSpaceName="fishBody" mapDEFToID="true" url="fish/fishBody.x3d" />
+          </Transform>
+          <Transform id="mouth" translation="0 0 0" rotation="1 0 0 0">
+            <Inline nameSpaceName="fishMouth" mapDEFToID="true" url="fish/fishMouth.x3d" />
+          </Transform>
 
-  <x3d width='500px' height='400px'>
-    <scene>
-      <viewpoint position="0 0 15"></viewpoint>
-      <Transform id="fish" translation="0 0 0">
-        <!-- <shape> 
-          <appearance> 
-            <material diffuseColor='1 0 0'></material> 
-          </appearance> 
-          <box></box> 
-        </shape> -->
-        <Transform id="body" translation="0 0 0">
-          <Inline nameSpaceName="fishBody" url="fishBody.glb" />
+          <Transform scale="1.8 1.8 1.8">
+            <Inline nameSpaceName="aquarium"  mapDEFToID="true" url="fish/aquarium.x3d" />
+          </Transform>
         </Transform>
-        <!-- <Inline nameSpaceName="fishMouth" url="fishMouth.glb" /> -->
-        <Transform id="mouth" translation="0 0 0">
-          <Inline nameSpaceName="fishMouth" url="fishMouth.glb" />
-        </Transform>
-      </Transform>
-      
-      <Transform scale="1.8 1.8 1.8">
-        <Inline nameSpaceName="aquarium" url="aquarium.glb" />
-      </Transform>
-    </scene>
-  </x3d>
+      </scene>
+    </x3d>
+
+    <!-- WEBCAM INPUT -->
+    <div class="column">
+      <article class="panel is-info">
+        <p class="panel-heading">
+          Webcam Input
+        </p>
+        <div class="panel-block">
+          <video class="input_video3"></video>
+        </div>
+      </article>
+    </div>
+  </div>
 
   <script>
     const video3 = document.getElementsByClassName('input_video3')[0];
+
+    const fishStep = 0.22;
+    const mouthStep = 0.04;
+    var fishPos = { x:0, y:0, z:0 };
+    var mouthRot = 0;
+
+    function distance(p1, p2) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dz = p2.z - p1.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        return dist;
+    }
+
+    function moveFish(startPoint, endPoint, stepSize) {
+      const dx = endPoint.x - startPoint.x;
+      const dy = endPoint.y - startPoint.y;
+      const dz = endPoint.z - startPoint.z;
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (distance <= stepSize)
+          return startPoint;
+
+      const nextPoint = {
+        x: startPoint.x + (dx / distance) * stepSize,
+        y: startPoint.y + (dy / distance) * stepSize,
+        z: startPoint.z + (dz / distance) * stepSize
+      }
+      return nextPoint;
+    }
+
+    function moveMouth(startPoint, endPoint, stepSize) {
+      if (Math.abs(endPoint - startPoint) <= stepSize)
+          return startPoint;
+      if (startPoint > endPoint)
+        return startPoint - stepSize;
+      if (startPoint < endPoint)
+        return startPoint + stepSize; 
+    }
 
     function onResultsHands(results) {
       // console.log("zde");
@@ -57,12 +101,29 @@
         console.log(results.multiHandLandmarks);
 
         basePos = results.multiHandLandmarks[0][0];
+        iFingerPos = results.multiHandLandmarks[0][8];
+        thumbPos = results.multiHandLandmarks[0][4];
+
+        var x3dFish = document.getElementById('fish');
+        const targetfishPos = { x:(basePos.x * 10) - 5, y:(basePos.y * -10) + 5, z:(basePos.z * 10) };
+        fishPos = moveFish(fishPos, targetfishPos, fishStep);
+        x3dFish.setAttribute("translation", `${fishPos.x} ${fishPos.y} ${fishPos.z}`);
+        console.log("base ");
         console.log(basePos.x);
+        console.log("fish ");
+        console.log(fishPos.x);
 
-        var x3dPos = document.getElementById('fish');
-        x3dPos.setAttribute("translation", `${(basePos.x * 10) - 5} ${(basePos.y * -10) + 5} ${(basePos.z * 10) - 5}`);
-        console.log(x3dPos.getAttribute("translation"));
-
+        // finger opening
+        const fingerDist = distance(iFingerPos, thumbPos)
+        console.log("finger distance: ");
+        console.log(fingerDist);   //max 0.5
+        var targetMouthRot = (fingerDist / -0.5) * 1.5 + 0.5;
+        targetMouthRot = Math.max(-1.5, targetMouthRot);
+        targetMouthRot = Math.min(0, targetMouthRot);
+        console.log(targetMouthRot); 
+        mouthRot = moveMouth(mouthRot, targetMouthRot, mouthStep);
+        var x3dMouth = document.getElementById('mouth');
+        x3dMouth.setAttribute("rotation", `0 0 1 ${mouthRot}`);
       }
       else {
         console.log("nic");
