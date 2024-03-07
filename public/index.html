@@ -33,9 +33,10 @@
             <Inline nameSpaceName="fishMouth" mapDEFToID="true" url="fish/fishMouth.x3d" />
           </Transform>
 
-          <Transform scale="1.8 1.8 1.8">
-            <Inline nameSpaceName="aquarium"  mapDEFToID="true" url="fish/aquarium.x3d" />
-          </Transform>
+          
+        </Transform>
+        <Transform scale="1.8 1.8 1.8" rotation="0 1 0 3.141593">
+          <Inline nameSpaceName="aquarium"  mapDEFToID="true" url="fish/aquarium.x3d" />
         </Transform>
       </scene>
     </x3d>
@@ -47,14 +48,14 @@
           Webcam Input
         </p>
         <div class="panel-block">
-          <video class="input_video3"></video>
+          <video class="input_video"></video>
         </div>
       </article>
     </div>
   </div>
 
   <script>
-    const video3 = document.getElementsByClassName('input_video3')[0];
+    const video = document.getElementsByClassName('input_video')[0];
 
     const fishStep = 0.22;
     const mouthStep = 0.04;
@@ -135,12 +136,12 @@
     }});
     hands.onResults(onResultsHands);
 
-    const camera = new Camera(video3, {
+    const camera = new Camera(video, {
       onFrame: async () => {
-        await hands.send({image: video3});
+        await hands.send({image: video});
       },
-      width: 480,
-      height: 480
+      width: 500,
+      height: 400
     });
     camera.start();
   </script>
